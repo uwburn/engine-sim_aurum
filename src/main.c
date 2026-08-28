@@ -219,6 +219,10 @@ void loop() {
       cylinders_state[i].fired = false;
     }
 
+    if ((int32_t)(now - cylinders_state[i].fire_end_time) < 0) {
+      au_digital_write(CYL_1_PIN + i, LOW);
+    }
+
     if (cylinders_state[i].fired) {
       continue;
     }
@@ -230,10 +234,6 @@ void loop() {
       au_tone(AUDIO_PIN, FIRE_FREQUENCY, FIRE_DURATION);
       cylinders_state[i].fired = true;
       cylinders_state[i].fire_end_time = now + FIRE_DURATION * 1000UL;
-    }
-
-    if ((int32_t)(now - cylinders_state[i].fire_end_time) < 0) {
-      au_digital_write(CYL_1_PIN + i, LOW);
     }
   }
 

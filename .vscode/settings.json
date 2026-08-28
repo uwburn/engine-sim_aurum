@@ -1,0 +1,19 @@
+{
+  "VsCodeTaskButtons.tasks": [
+    {
+      "label": "$(build) CMake build",
+      "task": "CMake: build",
+      "color": "default"
+    },
+    {
+      "label": "$(send) CMake flash",
+      "task": "CMake: flash",
+      "color": "default"
+    },
+    {
+      "label": "$(console) Serial monitor",
+      "task": "Serial monitor",
+      "color": "default"
+    }
+  ]
+}

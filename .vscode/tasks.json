@@ -1,0 +1,37 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cmake",
+			"label": "CMake: build",
+			"command": "build",
+			"targets": [
+				"all"
+			],
+			"group": "build",
+		},
+		{
+				"label": "CMake: flash",
+				"command": "build",
+				"type": "cmake",
+				"targets": [
+					"flash"
+				],
+				"group": "build"
+		},
+		{
+				"label": "Serial monitor",
+				"type": "process",
+				"command": "picocom",
+				"args": [
+						"-b",
+						"9600",
+						"/dev/ttyACM0"
+				],
+				"promptOnClose": true,
+				"runOptions": {
+					"instanceLimit": 1
+				}
+		}
+	]
+}

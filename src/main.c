@@ -1,0 +1,290 @@
+#include "aurum.h"
+#include <stdbool.h>
+
+void setup();
+void loop();
+
+int main(void) {
+  au_system_init();
+
+  setup();
+
+  while (1) {
+    loop();
+  }
+
+  return 0;
+}
+
+// BOARD CONFIG
+#define CFG_PIN 2
+#define THROTTLE_PIN A0
+
+#define CYL_1_PIN 8
+#define CYL_2_PIN 9
+#define CYL_3_PIN 10
+#define CYL_4_PIN 11
+
+#define AUDIO_PIN 12
+
+#define WELCOME_FREQ_STEP 500
+
+
+// ENGINE PARAMETERS
+#define MAX_CYLINDERS 4
+#define MIN_RPM 500
+#define RPM_PER_THROTTLE 12
+#define MAX_RPM (MIN_RPM + 1023UL * RPM_PER_THROTTLE)
+
+#define FIRE_DURATION 5
+#define FIRE_FREQUENCY 250
+
+
+// DEBUG
+#define DEBUG 0
+#define DEBUG_PERIOD 250000UL
+
+typedef struct {
+  uint8_t cylinders;
+  uint16_t firing_angles[MAX_CYLINDERS];
+  const char *name;
+} t_engine_cfg;
+
+
+// ENGINE MAPS
+const t_engine_cfg off_cfg = {
+  .cylinders = 0,
+  .firing_angles = { },
+  .name = "Off"
+};
+
+const t_engine_cfg mono_cfg = {
+  .cylinders = 1,
+  .firing_angles = { 0 },
+  .name = "Mono"
+};
+
+const t_engine_cfg i2_360_cfg = {
+  .cylinders = 2,
+  .firing_angles = { 0, 36000 },
+  .name = "I2 - 360°"
+};
+
+const t_engine_cfg i2_180_cfg = {
+  .cylinders = 2,
+  .firing_angles = { 0, 18000 },
+  .name = "I2 - 180°"
+};
+
+const t_engine_cfg i2_270_cfg = {
+  .cylinders = 2,
+  .firing_angles = { 0, 27000 },
+  .name = "I2 - 270°"
+};
+
+const t_engine_cfg i2_285_cfg = {
+  .cylinders = 2,
+  .firing_angles = { 0, 28500 },
+  .name = "I2 - 285°"
+};
+
+const t_engine_cfg i3_120_cfg = {
+  .cylinders = 3,
+  .firing_angles = { 0, 24000, 48000 },
+  .name = "I3 - 120°"
+};
+
+const t_engine_cfg i3_tplane_cfg = {
+  .cylinders = 3,
+  .firing_angles = { 0, 18000, 27000 },
+  .name = "I3 - T-Plane"
+};
+
+const t_engine_cfg i4_screamer_cfg = {
+  .cylinders = 4,
+  .firing_angles = { 0, 54000, 18000, 36000 },
+  .name = "I4 - Screamer"
+};
+
+const t_engine_cfg i4_crossplane_cfg = {
+  .cylinders = 4,
+  .firing_angles = { 0, 45000, 27000, 54000 },
+  .name = "I4 - Crossplane"
+};
+
+const t_engine_cfg i4_big_bang_cfg = {
+  .cylinders = 4,
+  .firing_angles = { 0, 36000, 36000, 0 },
+  .name = "I4 - Big-bang"
+};
+
+#define TOTAL_CFGS 11
+
+const t_engine_cfg *const cfgs[TOTAL_CFGS] = {
+  &off_cfg,
+  &mono_cfg,
+  &i2_360_cfg,
+  &i2_180_cfg,
+  &i2_270_cfg,
+  &i2_285_cfg,
+  &i3_120_cfg,
+  &i3_tplane_cfg,
+  &i4_screamer_cfg,
+  &i4_crossplane_cfg,
+  &i4_big_bang_cfg
+};
+
+
+// STATE
+typedef struct {
+  bool fired;
+  uint32_t fire_end_time;
+} t_cylinder_state;
+
+
+uint8_t prev_cfg_signal = 0;
+uint8_t cfg_index = 0;
+const t_engine_cfg *cfg = &off_cfg;
+uint32_t crank_phase = 0;
+uint32_t prev_crank_phase = 0;
+t_cylinder_state cylinders_state[MAX_CYLINDERS];
+uint32_t last_update = 0;
+uint32_t last_serial = 0;
+
+void welcome();
+void cylinders_off();
+void reset_cycles();
+uint32_t angle_to_phase(uint16_t angle);
+
+void setup() {
+  au_serial_init(9600);
+
+  au_pin_mode(CFG_PIN, INPUT_PULLUP);
+
+  for (int i = 0; i < MAX_CYLINDERS; ++i) {
+    au_pin_mode(CYL_1_PIN + i, OUTPUT);
+  }
+
+  au_pin_mode(AUDIO_PIN, OUTPUT);
+
+  welcome();
+
+  cylinders_off();
+  reset_cycles();
+}
+
+void loop() {
+  // Cfg switch
+  uint8_t cfg_signal = !au_digital_read(CFG_PIN);
+  if (cfg_signal && !prev_cfg_signal) {
+    cfg_index = (cfg_index + 1) % TOTAL_CFGS;
+    cfg = cfgs[cfg_index];
+
+    crank_phase = 0;
+    prev_crank_phase = 0;
+    last_update = au_micros();
+    cylinders_off();
+    reset_cycles();
+    au_no_tone(AUDIO_PIN);
+
+    au_serial_print_str("Switched engine config to ");
+    au_serial_println_str(cfg->name);
+  }
+  prev_cfg_signal = cfg_signal;
+
+  // Engine speed
+  uint16_t throttle = au_analog_read(THROTTLE_PIN);
+  uint32_t rpm = MIN_RPM + (uint32_t)throttle * RPM_PER_THROTTLE;
+  if (rpm > MAX_RPM) {
+    rpm = MAX_RPM;
+  }
+
+  // Update crank position
+  uint32_t now = au_micros();
+  uint32_t dt = now - last_update;
+  last_update = now;
+
+  // Phase increment
+  // One 720° cycle takes: 120000000 / RPM microseconds
+  // One cycle corresponds to: 2^32 phase units
+  // increment = dt * RPM * 2^32 / 120000000
+  uint32_t phase_inc = ((uint64_t)dt * rpm * 4294967296ULL) / 120000000ULL;
+  prev_crank_phase = crank_phase;
+  crank_phase += phase_inc;
+  bool wrapped = crank_phase < prev_crank_phase;
+
+  // Firings
+  for (int i = 0; i < cfg->cylinders; ++i) {
+    if (wrapped) {
+      cylinders_state[i].fired = false;
+    }
+
+    if (cylinders_state[i].fired) {
+      continue;
+    }
+
+    uint32_t fire_phase = angle_to_phase(cfg->firing_angles[i]);
+
+    if (crank_phase >= fire_phase) {
+      au_digital_write(CYL_1_PIN + i, HIGH);
+      au_tone(AUDIO_PIN, FIRE_FREQUENCY, FIRE_DURATION);
+      cylinders_state[i].fired = true;
+      cylinders_state[i].fire_end_time = now + FIRE_DURATION * 1000UL;
+    }
+
+    if ((int32_t)(now - cylinders_state[i].fire_end_time) < 0) {
+      au_digital_write(CYL_1_PIN + i, LOW);
+    }
+  }
+
+  // Debug
+  if (DEBUG && now - last_serial >= DEBUG_PERIOD) {
+    last_serial = now;
+
+    uint32_t angle = ((uint64_t)crank_phase * 720ULL) >> 32;
+
+    au_serial_print_str("RPM=");
+    au_serial_print_uint(rpm);
+
+    au_serial_print_str(" angle=");
+    au_serial_print_uint(angle);
+
+    au_serial_print_str(" phase=");
+    au_serial_println_uint(crank_phase);
+  }
+}
+
+void welcome() {
+  au_serial_println_str("Welcome to engine simulator!");
+
+  uint16_t f = WELCOME_FREQ_STEP;
+  for (int i = 0; i < 4; ++i) {
+    au_digital_write(8 + i, HIGH);
+    au_tone(12, f, 200);
+    f += WELCOME_FREQ_STEP;
+    au_delay(200);
+  }
+
+  for (int i = 0; i < 4; ++i) {
+    au_digital_write(8 + i, LOW);
+  }
+
+  au_delay(1000);
+}
+
+uint32_t angle_to_phase(uint16_t angle) {
+  return ((uint64_t)angle << 32) / 72000ULL;
+}
+
+void cylinders_off() {
+  for (int i = 0; i < cfg->cylinders; ++i) {
+    au_digital_write(CYL_1_PIN + i, LOW);
+  }
+}
+
+void reset_cycles() {
+  for (int i = 0; i < cfg->cylinders; ++i) {
+    cylinders_state[i].fired = false;
+    cylinders_state[i].fire_end_time = au_micros();
+  }
+}

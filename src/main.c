@@ -48,71 +48,71 @@ typedef struct {
   uint8_t cylinders;
   uint16_t firing_angles[MAX_CYLINDERS];
   const char *name;
-} t_engine_cfg;
+} engine_cfg_t;
 
 
 // ENGINE MAPS
-const t_engine_cfg off_cfg = {
+const engine_cfg_t off_cfg = {
   .cylinders = 0,
   .firing_angles = { },
   .name = "Off"
 };
 
-const t_engine_cfg mono_cfg = {
+const engine_cfg_t mono_cfg = {
   .cylinders = 1,
   .firing_angles = { 0 },
   .name = "Mono"
 };
 
-const t_engine_cfg i2_360_cfg = {
+const engine_cfg_t i2_360_cfg = {
   .cylinders = 2,
   .firing_angles = { 0, 36000 },
   .name = "I2 - 360°"
 };
 
-const t_engine_cfg i2_180_cfg = {
+const engine_cfg_t i2_180_cfg = {
   .cylinders = 2,
   .firing_angles = { 0, 18000 },
   .name = "I2 - 180°"
 };
 
-const t_engine_cfg i2_270_cfg = {
+const engine_cfg_t i2_270_cfg = {
   .cylinders = 2,
   .firing_angles = { 0, 27000 },
   .name = "I2 - 270°"
 };
 
-const t_engine_cfg i2_285_cfg = {
+const engine_cfg_t i2_285_cfg = {
   .cylinders = 2,
   .firing_angles = { 0, 28500 },
   .name = "I2 - 285°"
 };
 
-const t_engine_cfg i3_120_cfg = {
+const engine_cfg_t i3_120_cfg = {
   .cylinders = 3,
   .firing_angles = { 0, 24000, 48000 },
   .name = "I3 - 120°"
 };
 
-const t_engine_cfg i3_tplane_cfg = {
+const engine_cfg_t i3_tplane_cfg = {
   .cylinders = 3,
   .firing_angles = { 0, 18000, 27000 },
   .name = "I3 - T-Plane"
 };
 
-const t_engine_cfg i4_screamer_cfg = {
+const engine_cfg_t i4_screamer_cfg = {
   .cylinders = 4,
   .firing_angles = { 0, 54000, 18000, 36000 },
   .name = "I4 - Screamer"
 };
 
-const t_engine_cfg i4_crossplane_cfg = {
+const engine_cfg_t i4_crossplane_cfg = {
   .cylinders = 4,
   .firing_angles = { 0, 45000, 27000, 54000 },
   .name = "I4 - Crossplane"
 };
 
-const t_engine_cfg i4_big_bang_cfg = {
+const engine_cfg_t i4_big_bang_cfg = {
   .cylinders = 4,
   .firing_angles = { 0, 36000, 36000, 0 },
   .name = "I4 - Big-bang"
@@ -120,7 +120,7 @@ const t_engine_cfg i4_big_bang_cfg = {
 
 #define TOTAL_CFGS 11
 
-const t_engine_cfg *const cfgs[TOTAL_CFGS] = {
+const engine_cfg_t *const cfgs[TOTAL_CFGS] = {
   &off_cfg,
   &mono_cfg,
   &i2_360_cfg,
@@ -139,15 +139,15 @@ const t_engine_cfg *const cfgs[TOTAL_CFGS] = {
 typedef struct {
   bool fired;
   uint32_t fire_end_time;
-} t_cylinder_state;
+} cylinder_state_t;
 
 
 uint8_t prev_cfg_signal = 0;
 uint8_t cfg_index = 0;
-const t_engine_cfg *cfg = &off_cfg;
+const engine_cfg_t *cfg = &off_cfg;
 uint32_t crank_phase = 0;
 uint32_t prev_crank_phase = 0;
-t_cylinder_state cylinders_state[MAX_CYLINDERS];
+cylinder_state_t cylinders_state[MAX_CYLINDERS];
 uint32_t last_update = 0;
 uint32_t last_serial = 0;
 
@@ -256,6 +256,7 @@ void loop() {
 
 void welcome() {
   au_serial_println_str("Welcome to engine simulator!");
+  au_serial_println_str("");
 
   uint16_t f = WELCOME_FREQ_STEP;
   for (int i = 0; i < 4; ++i) {

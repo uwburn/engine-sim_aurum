@@ -5,7 +5,7 @@ void setup();
 void loop();
 
 int main(void) {
-  au_system_init();
+  au_init();
 
   setup();
 
@@ -36,7 +36,7 @@ int main(void) {
 #define RPM_PER_THROTTLE 12
 #define MAX_RPM (MIN_RPM + 1023UL * RPM_PER_THROTTLE)
 
-#define FIRE_DURATION 5
+#define FIRE_DURATION 2
 #define FIRE_FREQUENCY 250
 
 
@@ -157,7 +157,7 @@ void reset_cycles();
 uint32_t angle_to_phase(uint16_t angle);
 
 void setup() {
-  au_serial_init(9600);
+  au_serial_begin(115200, SERIAL_8N1);
 
   au_pin_mode(CFG_PIN, INPUT_PULLUP);
 

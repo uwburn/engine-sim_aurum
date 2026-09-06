@@ -25,7 +25,7 @@
 				"command": "picocom",
 				"args": [
 						"-b",
-						"9600",
+						"115200",
 						"/dev/ttyACM0"
 				],
 				"promptOnClose": true,

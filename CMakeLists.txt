@@ -4,6 +4,7 @@ set(MCU atmega328p)
 set(F_CPU 16000000UL)
 
 set(CMAKE_C_COMPILER avr-gcc)
+set(CMAKE_ASM_COMPILER avr-gcc)
 set(CMAKE_OBJCOPY avr-objcopy)
 
 set(CMAKE_C_STANDARD 11)
@@ -11,7 +12,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(PORT /dev/ttyACM0)
 
-project(engine-sim C)
+project(engine-sim C ASM)
 
 add_subdirectory(lib/aurum)
 

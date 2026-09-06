@@ -41,6 +41,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 target_link_options(${PROJECT_NAME} PRIVATE
     -mmcu=${MCU}
+    -Wl,--gc-sections
+    -Wl,-Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

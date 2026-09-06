@@ -18,7 +18,7 @@ int main(void) {
 
 // BOARD CONFIG
 #define CFG_PIN 2
-#define THROTTLE_PIN A0
+#define THROTTLE_PIN AU_A0
 
 #define CYL_1_PIN 8
 #define CYL_2_PIN 9
@@ -157,15 +157,15 @@ void reset_cycles();
 uint32_t angle_to_phase(uint16_t angle);
 
 void setup() {
-  au_serial_begin(115200, SERIAL_8N1);
+  au_serial_begin(115200, AU_SERIAL_8N1);
 
-  au_pin_mode(CFG_PIN, INPUT_PULLUP);
+  au_pin_mode(CFG_PIN, AU_INPUT_PULLUP);
 
   for (int i = 0; i < MAX_CYLINDERS; ++i) {
-    au_pin_mode(CYL_1_PIN + i, OUTPUT);
+    au_pin_mode(CYL_1_PIN + i, AU_OUTPUT);
   }
 
-  au_pin_mode(AUDIO_PIN, OUTPUT);
+  au_pin_mode(AUDIO_PIN, AU_OUTPUT);
 
   welcome();
 
@@ -220,7 +220,7 @@ void loop() {
     }
 
     if ((int32_t)(now - cylinders_state[i].fire_end_time) < 0) {
-      au_digital_write(CYL_1_PIN + i, LOW);
+      au_digital_write(CYL_1_PIN + i, AU_LOW);
     }
 
     if (cylinders_state[i].fired) {
@@ -230,7 +230,7 @@ void loop() {
     uint32_t fire_phase = angle_to_phase(cfg->firing_angles[i]);
 
     if (crank_phase >= fire_phase) {
-      au_digital_write(CYL_1_PIN + i, HIGH);
+      au_digital_write(CYL_1_PIN + i, AU_HIGH);
       au_tone(AUDIO_PIN, FIRE_FREQUENCY, FIRE_DURATION);
       cylinders_state[i].fired = true;
       cylinders_state[i].fire_end_time = now + FIRE_DURATION * 1000UL;
@@ -260,14 +260,14 @@ void welcome() {
 
   uint16_t f = WELCOME_FREQ_STEP;
   for (int i = 0; i < 4; ++i) {
-    au_digital_write(8 + i, HIGH);
+    au_digital_write(8 + i, AU_HIGH);
     au_tone(12, f, 200);
     f += WELCOME_FREQ_STEP;
     au_delay(200);
   }
 
   for (int i = 0; i < 4; ++i) {
-    au_digital_write(8 + i, LOW);
+    au_digital_write(8 + i, AU_LOW);
   }
 
   au_delay(1000);
@@ -279,7 +279,7 @@ uint32_t angle_to_phase(uint16_t angle) {
 
 void cylinders_off() {
   for (int i = 0; i < cfg->cylinders; ++i) {
-    au_digital_write(CYL_1_PIN + i, LOW);
+    au_digital_write(CYL_1_PIN + i, AU_LOW);
   }
 }
 

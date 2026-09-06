@@ -1,5 +1,7 @@
-#include "aurum.h"
 #include <stdbool.h>
+
+#include "aurum/core.h"
+#include "aurum/tone.h"
 
 void setup();
 void loop();

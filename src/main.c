@@ -3,6 +3,8 @@
 #include "aurum/core.h"
 #include "aurum/tone.h"
 
+au_printer_t serial_printer = au_serial_build_printer();
+
 void setup();
 void loop();
 
@@ -189,8 +191,8 @@ void loop() {
     reset_cycles();
     au_no_tone(AUDIO_PIN);
 
-    au_serial_print_str("Switched engine config to ");
-    au_serial_println_str(cfg->name);
+    au_print_str(&serial_printer, "Switched engine config to ");
+    au_println_str(&serial_printer, cfg->name);
   }
   prev_cfg_signal = cfg_signal;
 
@@ -245,20 +247,20 @@ void loop() {
 
     uint32_t angle = ((uint64_t)crank_phase * 720ULL) >> 32;
 
-    au_serial_print_str("RPM=");
-    au_serial_print_uint(rpm);
+    au_print_str(&serial_printer, "RPM=");
+    au_print_uint(&serial_printer, rpm);
 
-    au_serial_print_str(" angle=");
-    au_serial_print_uint(angle);
+    au_print_str(&serial_printer, " angle=");
+    au_print_uint(&serial_printer, angle);
 
-    au_serial_print_str(" phase=");
-    au_serial_println_uint(crank_phase);
+    au_print_str(&serial_printer, " phase=");
+    au_println_uint(&serial_printer, crank_phase);
   }
 }
 
 void welcome() {
-  au_serial_println_str("Welcome to engine simulator!");
-  au_serial_println_str("");
+  au_println_str(&serial_printer, "Welcome to engine simulator!");
+  au_println_str(&serial_printer, "");
 
   uint16_t f = WELCOME_FREQ_STEP;
   for (int i = 0; i < 4; ++i) {
